@@ -27,6 +27,7 @@ public class MinigameResetSpawn extends JavaPlugin implements Listener {
         createDataFile();
         inMinigame = dataConfig.getStringList("players");
         Bukkit.getPluginManager().registerEvents(this, this);
+        getLogger().info("ResetSpawn v1.21.4 Ready!");
     }
 
     @EventHandler
@@ -35,29 +36,40 @@ public class MinigameResetSpawn extends JavaPlugin implements Listener {
         if (inMinigame.contains(p.getUniqueId().toString())) {
             Location lobbyLoc = getLobbyLocation();
             if (lobbyLoc != null) {
-                e.setSpawnLocation(lobbyLoc); // Paksa spawn ke lobby
+                // Paksa posisi spawn ke lobby sebelum player ngerender world
+                e.setSpawnLocation(lobbyLoc);
+                
+                // Hapus dari daftar hantu & simpan
                 setInMinigame(p, false);
+                
                 Bukkit.getScheduler().runTaskLater(this, () -> 
-                    p.sendMessage("§c[System] Kamu dikembalikan ke Lobby!"), 20L);
+                    p.sendMessage("§c[!] Kamu logout saat game, balik ke Lobby."), 20L);
             }
         }
     }
 
     public void setInMinigame(Player p, boolean status) {
         String uuid = p.getUniqueId().toString();
-        if (status) { if (!inMinigame.contains(uuid)) inMinigame.add(uuid); }
-        else { inMinigame.remove(uuid); }
+        if (status) {
+            if (!inMinigame.contains(uuid)) inMinigame.add(uuid);
+        } else {
+            inMinigame.remove(uuid);
+        }
         saveData();
     }
 
     private Location getLobbyLocation() {
+        FileConfiguration c = getConfig();
+        String worldName = c.getString("lobby.world", "world");
+        if (Bukkit.getWorld(worldName) == null) return null;
+        
         return new Location(
-            Bukkit.getWorld(getConfig().getString("lobby.world", "world")),
-            getConfig().getDouble("lobby.x"),
-            getConfig().getDouble("lobby.y"),
-            getConfig().getDouble("lobby.z"),
-            (float) getConfig().getDouble("lobby.yaw"),
-            (float) getConfig().getDouble("lobby.pitch")
+            Bukkit.getWorld(worldName),
+            c.getDouble("lobby.x"),
+            c.getDouble("lobby.y"),
+            c.getDouble("lobby.z"),
+            (float) c.getDouble("lobby.yaw"),
+            (float) c.getDouble("lobby.pitch")
         );
     }
 
@@ -75,4 +87,3 @@ public class MinigameResetSpawn extends JavaPlugin implements Listener {
         try { dataConfig.save(dataFile); } catch (IOException e) { e.printStackTrace(); }
     }
 }
-
