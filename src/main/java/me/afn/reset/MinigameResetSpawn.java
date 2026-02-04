@@ -2,88 +2,53 @@ package me.afn.reset;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.spigotmc.event.player.PlayerSpawnLocationEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class MinigameResetSpawn extends JavaPlugin implements Listener {
 
-    private File dataFile;
-    private FileConfiguration dataConfig;
-    private List<String> inMinigame = new ArrayList<>();
+    private Location lobby;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        createDataFile();
-        inMinigame = dataConfig.getStringList("players");
+        loadLobby();
         Bukkit.getPluginManager().registerEvents(this, this);
-        getLogger().info("ResetSpawn v1.21.4 Ready!");
+        getLogger().info("MinigameResetSpawn enabled (1.21.4)");
     }
 
-    @EventHandler
-    public void onPlayerSpawn(PlayerSpawnLocationEvent e) {
-        Player p = e.getPlayer();
-        if (inMinigame.contains(p.getUniqueId().toString())) {
-            Location lobbyLoc = getLobbyLocation();
-            if (lobbyLoc != null) {
-                // Paksa posisi spawn ke lobby sebelum player ngerender world
-                e.setSpawnLocation(lobbyLoc);
-                
-                // Hapus dari daftar hantu & simpan
-                setInMinigame(p, false);
-                
-                Bukkit.getScheduler().runTaskLater(this, () -> 
-                    p.sendMessage("§c[!] Kamu logout saat game, balik ke Lobby."), 20L);
-            }
+    private void loadLobby() {
+        String worldName = getConfig().getString("lobby.world");
+        World world = Bukkit.getWorld(worldName);
+
+        if (world == null) {
+            getLogger().severe("Lobby world not found: " + worldName);
+            return;
         }
-    }
 
-    public void setInMinigame(Player p, boolean status) {
-        String uuid = p.getUniqueId().toString();
-        if (status) {
-            if (!inMinigame.contains(uuid)) inMinigame.add(uuid);
-        } else {
-            inMinigame.remove(uuid);
-        }
-        saveData();
-    }
-
-    private Location getLobbyLocation() {
-        FileConfiguration c = getConfig();
-        String worldName = c.getString("lobby.world", "world");
-        if (Bukkit.getWorld(worldName) == null) return null;
-        
-        return new Location(
-            Bukkit.getWorld(worldName),
-            c.getDouble("lobby.x"),
-            c.getDouble("lobby.y"),
-            c.getDouble("lobby.z"),
-            (float) c.getDouble("lobby.yaw"),
-            (float) c.getDouble("lobby.pitch")
+        lobby = new Location(
+                world,
+                getConfig().getDouble("lobby.x"),
+                getConfig().getDouble("lobby.y"),
+                getConfig().getDouble("lobby.z"),
+                (float) getConfig().getDouble("lobby.yaw"),
+                (float) getConfig().getDouble("lobby.pitch")
         );
     }
 
-    private void createDataFile() {
-        dataFile = new File(getDataFolder(), "data.yml");
-        if (!dataFile.exists()) {
-            dataFile.getParentFile().mkdirs();
-            try { dataFile.createNewFile(); } catch (IOException e) { e.printStackTrace(); }
-        }
-        dataConfig = YamlConfiguration.loadConfiguration(dataFile);
-    }
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
 
-    private void saveData() {
-        dataConfig.set("players", inMinigame);
-        try { dataConfig.save(dataFile); } catch (IOException e) { e.printStackTrace(); }
+        // Delay kecil biar aman dari join glitch
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (lobby != null && player.isOnline()) {
+                player.teleport(lobby);
+            }
+        }, 5L);
     }
 }
