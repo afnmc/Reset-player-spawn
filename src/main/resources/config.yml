@@ -1,7 +1,7 @@
 lobby:
   world: world
   x: 0.5
-  y: 100.0
+  y: 100
   z: 0.5
   yaw: 0
   pitch: 0
