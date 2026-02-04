@@ -1,5 +1,6 @@
 name: MinigameResetSpawn
-version: 1.21.4
+version: 1.0
 main: me.afn.reset.MinigameResetSpawn
-api-version: '1.21'
-author: AFN
+api-version: 1.21
+author: afn
+description: Force teleport players to lobby on join
